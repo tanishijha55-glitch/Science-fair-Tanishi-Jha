@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Science Quest — The Energy Challenge</title>
+  <meta name="description" content="A kid-friendly science competition website (7th grade) with 3 mini-games. Single-file HTML, CSS & JS." />
+  <style>
+    /* ---------------- Reset ---------------- */
+    *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
+    img{max-width:100%;display:block}
+
+    /* ---------------- Theme variables ---------------- */
+    :root{
+      --bg:#eaf6ff; /* pale blue lab background */
+      --card:#ffffff; /* white cards */
+      --muted:#61707a;
+      --accent:#0ea5a4; /* teal */
+      --accent-2:#0369a1; /* deep blue */
+      --success:#16a34a;
+      --danger:#ef4444;
+      --glass:rgba(2,6,23,0.04);
+      --shadow: 0 8px 24px rgba(2,6,23,0.08);
+    }
+
+    body{background:linear-gradient(180deg,var(--bg),#dff3ff);color:#083344}
+    .container{width:min(1100px,96%);margin:2rem auto;padding:1rem}
+
+    header{display:flex;align-items:center;gap:1rem}
+    .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:white;font-weight:800;font-size:1.2rem;box-shadow:var(--shadow)}
+    h1{margin:0;font-size:1.5rem}
+    p.lead{color:var(--muted);margin:.25rem 0 1rem}
+
+    nav{display:flex;gap:.6rem;margin-top:.8rem;flex-wrap:wrap}
+    button.btn{background:var(--accent);border:0;color:white;padding:.55rem .8rem;border-radius:8px;font-weight:700;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(0,0,0,0.06);color:var(--accent-2)}
+
+    main{margin-top:1rem}
+
+    .card{background:var(--card);border-radius:12px;padding:1rem;box-shadow:var(--shadow);}
+    .grid{display:grid;gap:1rem}
+
+    /* Lobby layout */
+    .lobby{display:grid;grid-template-columns:2fr 1fr;gap:1rem;align-items:start}
+    .game-tile{display:flex;align-items:center;gap:1rem;padding:1rem;border-radius:10px;background:linear-gradient(180deg,rgba(2,6,23,0.02),transparent)}
+    .game-tile h3{margin:0}
+    .small{font-size:.9rem;color:var(--muted)}
+
+    /* Game area */
+    .game-area{min-height:380px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .scoreboard{display:flex;gap:.6rem;align-items:center}
+    .pill{background:var(--glass);padding:.4rem .6rem;border-radius:999px;font-weight:700}
+
+    /* Quiz styles */
+    .question{font-weight:700;margin-bottom:.6rem}
+    .options{display:flex;flex-direction:column;gap:.6rem}
+    .option{padding:.6rem;border-radius:10px;border:1px solid rgba(2,6,23,0.06);background:#f7feff;cursor:pointer}
+    .option.correct{border-color:var(--success);background:rgba(16,185,129,0.06)}
+    .option.wrong{border-color:var(--danger);background:rgba(239,68,68,0.06)}
+
+    /* Drag & drop energy match */
+    .dnd-board{display:flex;gap:1rem;flex-wrap:wrap}
+    .pool, .targets{display:flex;flex-direction:column;gap:.6rem}
+    .d-item{padding:.6rem;border-radius:8px;background:linear-gradient(90deg,#fff,#f0fdff);border:1px dashed rgba(2,6,23,0.06);cursor:grab}
+    .target{min-height:48px;padding:.4rem;border-radius:8px;background:#eef9f9;border:2px dashed rgba(3,105,161,0.12);display:flex;align-items:center;justify-content:center}
+
+    /* Circuit Builder */
+    .circuit{display:flex;gap:1rem;align-items:center;justify-content:center;padding:1rem}
+    .component{padding:.6rem 1rem;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:white}
+    .bulb{width:38px;height:38px;border-radius:999px;background:linear-gradient(180deg,#fffbeb,#fff6e0);display:grid;place-items:center;border:2px solid rgba(0,0,0,0.06)}
+
+    /* Results & leaderboard */
+    .leaderboard{width:100%;border-collapse:collapse}
+    .leaderboard th, .leaderboard td{padding:.6rem;border-bottom:1px solid rgba(2,6,23,0.04);text-align:left}
+
+    /* Footer */
+    footer{margin-top:1.4rem;color:var(--muted);font-size:.9rem}
+
+    /* Responsive */
+    @media (max-width:880px){
+      .lobby{grid-template-columns:1fr}
+      .game-tile{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">SQ</div>
+      <div>
+        <h1>Science Quest — The Energy Challenge</h1>
+        <p class="lead">A friendly competition for 7th graders. Complete 3 mini-games and earn points!</p>
+        <nav>
+          <button class="btn" id="startBtn">Start Competition</button>
+          <button class="ghost" id="howBtn">How it works</button>
+          <button class="ghost" id="leaderBtn">View Leaderboard</button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="card lobby" id="lobby">
+        <div>
+          <h2 style="margin-top:0">Competition Lobby</h2>
+          <p class="small">Welcome! You'll play three games in this order: <strong>Energy Explorer</strong> (drag & drop), <strong>Circuit Builder</strong>, and <strong>Quiz Whiz</strong>. Each game's score adds to your total.</p>
+
+          <div style="margin-top:1rem" class="grid">
+            <div class="game-tile">
+              <div style="width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#a7f3d0,#06b6d4);display:grid;place-items:center;font-weight:800">1</div>
+              <div>
+                <h3>Energy Explorer</h3>
+                <div class="small">Match energy sources to the correct type. +50 points</div>
+              </div>
+            </div>
+
+            <div class="game-tile">
+              <div style="width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#bfdbfe,#60a5fa);display:grid;place-items:center;font-weight:800">2</div>
+              <div>
+                <h3>Circuit Builder</h3>
+                <div class="small">Build a working circuit to light the bulb. +100 points</div>
+              </div>
+            </div>
+
+            <div class="game-tile">
+              <div style="width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#fde68a,#f97316);display:grid;place-items:center;font-weight:800">3</div>
+              <div>
+                <h3>Quiz Whiz</h3>
+                <div class="small">Answer 10 quick questions. +100 points total</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem" class="card">
+            <label for="playerName">Enter player name (or team):</label>
+            <input id="playerName" placeholder="Your name" style="padding:.6rem;border-radius:8px;border:1px solid rgba(2,6,23,0.06);width:100%;margin-top:.5rem" />
+            <div style="display:flex;gap:.6rem;margin-top:.6rem">
+              <button class="btn" id="beginBtn">Begin</button>
+              <button class="ghost" id="resetBtn">Reset local leaderboard</button>
+            </div>
+          </div>
+
+        </div>
+
+        <aside>
+          <div class="card">
+            <h3 style="margin-top:0">Scoreboard</h3>
+            <div class="small">Your progress will show here while you play.</div>
+            <div style="margin-top:.8rem;display:flex;flex-direction:column;gap:.4rem">
+              <div class="pill">Energy Explorer: <span id="s1">0</span></div>
+              <div class="pill">Circuit Builder: <span id="s2">0</span></div>
+              <div class="pill">Quiz Whiz: <span id="s3">0</span></div>
+              <div class="pill">Total: <strong id="total">0</strong></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:1rem">
+            <h4 style="margin:0">How to play</h4>
+            <ol style="padding-left:1.1rem;margin-top:.6rem">
+              <li>Enter your name and click <strong>Begin</strong>.</li>
+              <li>Complete each game in order. You can retry a game once to improve your score.</li>
+              <li>When finished submit your final score to the leaderboard.</li>
+            </ol>
+          </div>
+        </aside>
+      </section>
+
+      <!-- Game container -->
+      <section class="card" id="game" style="display:none;margin-top:1rem">
+        <div class="topbar">
+          <div class="scoreboard">
+            <div class="pill">Player: <strong id="curPlayer">-</strong></div>
+            <div class="pill">Game: <strong id="curGame">-</strong></div>
+            <div class="pill">Score: <strong id="curScore">0</strong></div>
+          </div>
+          <div>
+            <button class="ghost" id="backLobby">Back to Lobby</button>
+            <button class="btn" id="nextBtn">Next</button>
+          </div>
+        </div>
+
+        <div id="gameArea" class="game-area"></div>
+      </section>
+
+      <!-- Results / Submit -->
+      <section class="card" id="results" style="display:none;margin-top:1rem">
+        <h2 style="margin-top:0">Final Results</h2>
+        <p class="small">Great job! Check your total and submit your score to the local leaderboard.</p>
+        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+          <div class="pill">Player: <strong id="resName">-</strong></div>
+          <div class="pill">Total Score: <strong id="resTotal">0</strong></div>
+          <button class="btn" id="submitScore">Submit to Leaderboard</button>
+          <button class="ghost" id="downloadCSV">Download leaderboard CSV</button>
+        </div>
+      </section>
+
+      <!-- Leaderboard -->
+      <section class="card" id="leaderboardSection" style="display:none;margin-top:1rem">
+        <h2 style="margin-top:0">Local Leaderboard</h2>
+        <table class="leaderboard" id="leaderTable">
+          <thead><tr><th>Rank</th><th>Name</th><th>Score</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+    </main>
+
+    <footer>
+      <div class="small">Tip: Save this file as <code>index.html</code> and open it in Chrome or Firefox. To share, upload the file to GitHub Pages or Netlify.</div>
+    </footer>
+  </div>
+
+  <script>
+    /* ---------------- Global state ---------------- */
+    const state = {
+      player: '',
+      step: 0, // 0=lobby, 1=Energy,2=Circuit,3=Quiz,4=results
+      scores: { s1:0, s2:0, s3:0 },
+      attempts: { s1:0, s2:0, s3:0 },
+      quizQuestions: [],
+      localLeaderboard: []
+    }
+
+    /* ---------------- Utility helpers ---------------- */
+    function $(id){return document.getElementById(id)}
+    function show(id){ $(id).style.display='block'}
+    function hide(id){ $(id).style.display='none'}
+
+    function updateScoreUI(){
+      $('s1').innerText = state.scores.s1
+      $('s2').innerText = state.scores.s2
+      $('s3').innerText = state.scores.s3
+      $('total').innerText = totalScore()
+      $('curScore').innerText = totalScore()
+    }
+    function totalScore(){ return state.scores.s1 + state.scores.s2 + state.scores.s3 }
+
+    /* ---------------- Lobby actions ---------------- */
+    $('startBtn').addEventListener('click', ()=>{ window.scrollTo({top:0,behavior:'smooth'}); $('playerName').focus() })
+    $('howBtn').addEventListener('click', ()=> alert('Complete three games. Each game gives points. Have fun!'))
+    $('leaderBtn').addEventListener('click', ()=>{ renderLeaderboard(); show('leaderboardSection'); scrollInto('leaderboardSection') })
+
+    $('beginBtn').addEventListener('click', ()=>{
+      const name = $('playerName').value.trim() || 'Player'
+      state.player = name
+      state.step = 1
+      $('curPlayer').innerText = state.player
+      $('curGame').innerText = 'Energy Explorer'
+      hide('lobby')
+      show('game')
+      renderEnergyGame()
+    })
+
+    $('backLobby').addEventListener('click', ()=>{
+      if(confirm('Return to lobby? Progress for unfinished games will be kept.')){
+        show('lobby'); hide('game'); hide('results'); hide('leaderboardSection')
+      }
+    })
+
+    $('resetBtn').addEventListener('click', ()=>{
+      if(confirm('Erase local leaderboard?')){ localStorage.removeItem('sq_leader'); alert('Local leaderboard reset'); }
+    })
+
+    $('nextBtn').addEventListener('click', ()=>{
+      if(state.step === 1){ state.step = 2; $('curGame').innerText='Circuit Builder'; renderCircuitGame(); }
+      else if(state.step ===2){ state.step =3; $('curGame').innerText='Quiz Whiz'; renderQuizGame(); }
+      else if(state.step ===3){ state.step =4; showResults(); }
+      updateScoreUI(); scrollInto('game')
+    })
+
+    $('submitScore').addEventListener('click', ()=>{ submitLocalLeaderboard(); renderLeaderboard(); show('leaderboardSection'); scrollInto('leaderboardSection') })
+    $('downloadCSV').addEventListener('click', ()=>{ downloadLeaderboardCSV() })
+
+    function scrollInto(id){ document.getElementById(id).scrollIntoView({behavior:'smooth'}); }
+
+    /* ---------------- Game 1: Energy Explorer (drag & drop matching) ---------------- */
+    function renderEnergyGame(){
+      state.attempts.s1++
+      const container = $('gameArea'); container.innerHTML = ''
+      const el = document.createElement('div')
+      el.innerHTML = `
+        <h2>Energy Explorer</h2>
+        <p class="small">Drag each energy source into the correct box: <strong>Renewable</strong> or <strong>Non-renewable</strong>.</p>
+        <div class="dnd-board" style="margin-top:1rem">
+          <div style="flex:1">
+            <h4>Sources</h4>
+            <div id="pool" class="pool"></div>
+          </div>
+          <div style="flex:1">
+            <h4>Renewable</h4>
+            <div id="renew" class="targets"></div>
+            <h4 style="margin-top:1rem">Non-renewable</h4>
+            <div id="nonrenew" class="targets"></div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;display:flex;gap:.6rem">
+          <button class="btn" id="check1">Check</button>
+          <button class="ghost" id="reset1">Reset</button>
+        </div>
+      `
+      container.appendChild(el)
+
+      // sources: pair => [name, type]
+      const sources = [ ['Solar','renew'], ['Wind','renew'], ['Coal','nonrenew'], ['Natural Gas','nonrenew'], ['Hydro','renew'] ]
+
+      const pool = $('pool'); const renew = $('renew'); const nonrenew = $('nonrenew')
+      pool.innerHTML=''; renew.innerHTML=''; nonrenew.innerHTML=''
+
+      // create draggable items
+      sources.slice().sort(()=>Math.random()-0.5).forEach(([name,type],i)=>{
+        const d = document.createElement('div'); d.className='d-item'; d.draggable=true; d.id='item_'+i; d.innerText = name
+        d.dataset.type = type
+        d.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', d.id) })
+        pool.appendChild(d)
+      })
+
+      // create 3 targets for each category to accept drops
+      for(let i=0;i<3;i++){
+        const t1 = document.createElement('div'); t1.className='target'; t1.dataset.accept='renew'; t1.addEventListener('dragover', e=>e.preventDefault()); t1.addEventListener('drop', handleDrop)
+        renew.appendChild(t1)
+        const t2 = document.createElement('div'); t2.className='target'; t2.dataset.accept='nonrenew'; t2.addEventListener('dragover', e=>e.preventDefault()); t2.addEventListener('drop', handleDrop)
+        nonrenew.appendChild(t2)
+      }
+
+      function handleDrop(e){ e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); const dragged = document.getElementById(id)
+        if(!dragged) return
+        // if target already has a child, move it back
+        if(this.firstChild) { document.getElementById('pool').appendChild(this.firstChild) }
+        this.appendChild(dragged)
+      }
+
+      $('reset1').addEventListener('click', ()=>{ sources.forEach((_,i)=>{ const it = $('item_'+i); if(it) $('pool').appendChild(it) }); })
+
+      $('check1').addEventListener('click', ()=>{
+        // score: +10 per correct placement
+        let points = 0
+        // check renew targets
+        renew.querySelectorAll('.target').forEach(t=>{ if(t.firstChild && t.firstChild.dataset.type==='renew') points+=10 })
+        nonrenew.querySelectorAll('.target').forEach(t=>{ if(t.firstChild && t.firstChild.dataset.type==='nonrenew') points+=10 })
+        // cap at 50
+        points = Math.min(points,50)
+        state.scores.s1 = Math.max(state.scores.s1, points) // allow retry to improve
+        updateScoreUI();
+        alert('You scored '+points+' points on Energy Explorer!')
+      })
+
+      updateScoreUI();
+    }
+
+    /* ---------------- Game 2: Circuit Builder ---------------- */
+    function renderCircuitGame(){
+      state.attempts.s2++
+      const container = $('gameArea'); container.innerHTML = ''
+      const el = document.createElement('div')
+      el.innerHTML = `
+        <h2>Circuit Builder</h2>
+        <p class="small">Drag the components into the circuit area and try to make the bulb light. A complete working circuit gives full points.</p>
+        <div style="display:flex;gap:1rem;align-items:flex-start;margin-top:1rem">
+          <div style="flex:1">
+            <h4>Components</h4>
+            <div id="compPool"></div>
+          </div>
+          <div style="flex:1">
+            <h4>Circuit Area</h4>
+            <div id="circuitArea" style="padding:1rem;border-radius:10px;border:1px dashed rgba(2,6,23,0.06);min-height:140px"></div>
+            <div style="margin-top:.8rem;display:flex;gap:.6rem">
+              <button class="btn" id="testCircuit">Test Circuit</button>
+              <button class="ghost" id="resetCircuit">Reset</button>
+            </div>
+          </div>
+        </div>
+      `
+      container.appendChild(el)
+
+      const pool = $('compPool'); pool.innerHTML=''
+      const comps = ['Battery','Wire','Bulb','Switch','Resistor']
+      comps.forEach((c,i)=>{
+        const d = document.createElement('div'); d.className='component'; d.draggable=true; d.id='comp_'+i; d.innerText=c
+        d.addEventListener('dragstart', e=> e.dataTransfer.setData('text/plain', d.id))
+        pool.appendChild(d)
+      })
+
+      const area = $('circuitArea')
+      area.addEventListener('dragover', e=>e.preventDefault())
+      area.addEventListener('drop', e=>{
+        const id = e.dataTransfer.getData('text/plain'); const el = document.getElementById(id)
+        if(!el) return
+        // clone into area (so original remains in pool)
+        const clone = el.cloneNode(true); clone.id = id+'_placed_'+Date.now(); clone.draggable=false; area.appendChild(clone)
+      })
+
+      $('resetCircuit').addEventListener('click', ()=>{ area.innerHTML=''; })
+
+      $('testCircuit').addEventListener('click', ()=>{
+        // simple rule: working circuit needs at least Battery + Bulb + Wire
+        const placed = Array.from(area.children).map(x=>x.innerText)
+        const hasBattery = placed.includes('Battery')
+        const hasBulb = placed.includes('Bulb')
+        const hasWire = placed.includes('Wire')
+        const hasSwitch = placed.includes('Switch')
+        let points = 0
+        if(hasBattery && hasBulb && hasWire){
+          points = 100 // full points
+        } else if((hasBattery && hasBulb) || (hasBulb && hasWire)){
+          points = 50
+        } else points = 0
+        state.scores.s2 = Math.max(state.scores.s2, points)
+        updateScoreUI();
+        if(points>=100) alert('Success! The bulb lights — you earned '+points+' points!')
+        else alert('Circuit incomplete. You earned '+points+' points. Try rearranging components.')
+      })
+
+      updateScoreUI();
+    }
+
+    /* ---------------- Game 3: Quiz Whiz ---------------- */
+    function loadQuizQuestions(){
+      // friendly 10 questions for 7th grade
+      state.quizQuestions = [
+        {q:'Which energy source is renewable?', options:['Coal','Solar','Oil','Natural gas'], a:1},
+        {q:'Electric current flows in a', options:['Loop','Line','Dot','Square'], a:0},
+        {q:'Which tissue helps plants make food?', options:['Muscle','Leaves','Bark','Roots'], a:1},
+        {q:'Water boils at 100°C. This is an example of a', options:['Chemical change','Physical change','Biological change','Electrical change'], a:1},
+        {q:'Which gas do plants take in for photosynthesis?', options:['Oxygen','Nitrogen','Carbon dioxide','Hydrogen'], a:2},
+        {q:'Insulators are materials that', options:['Let electricity flow easily','Stop electricity flow','Make circuits faster','Create energy'], a:1},
+        {q:'Which planet is known as the Red Planet?', options:['Venus','Mars','Jupiter','Mercury'], a:1},
+        {q:'A force that pulls objects toward Earth is called', options:['Friction','Magnetism','Gravity','Electricity'], a:2},
+        {q:'Mixtures where you can see different parts are called', options:['Solutions','Compounds','Heterogeneous','Homogeneous'], a:2},
+        {q:'Which of these is a non-renewable resource?', options:['Wind','Solar','Coal','Hydro'], a:2}
+      ]
+    }
+
+    function renderQuizGame(){
+      state.attempts.s3++
+      const container = $('gameArea'); container.innerHTML=''
+      loadQuizQuestions()
+      // randomize questions order
+      const qlist = state.quizQuestions.slice().sort(()=>Math.random()-0.5)
+      let index = 0; let correctCount = 0
+
+      const el = document.createElement('div')
+      el.innerHTML = `
+        <h2>Quiz Whiz</h2>
+        <p class="small">Answer 10 short questions. Immediate feedback after each question.</p>
+        <div id="quizBox" style="margin-top:1rem"></div>
+      `
+      container.appendChild(el)
+
+      function showQ(){
+        const q = qlist[index]
+        const qb = document.getElementById('quizBox'); qb.innerHTML=''
+        const qel = document.createElement('div'); qel.innerHTML = `<div class="question">${index+1}. ${q.q}</div>`
+        const opts = document.createElement('div'); opts.className='options'
+        q.options.forEach((opt,i)=>{
+          const o = document.createElement('div'); o.className='option'; o.innerText = opt
+          o.addEventListener('click', ()=>{
+            // mark
+            if(i===q.a){ o.classList.add('correct'); correctCount++ } else { o.classList.add('wrong'); opts.children[q.a].classList.add('correct') }
+            // disable clicks
+            Array.from(opts.children).forEach(ch=>ch.style.pointerEvents='none')
+            setTimeout(()=>{ index++; if(index<qlist.length) showQ(); else finishQuiz() }, 900)
+          })
+          opts.appendChild(o)
+        })
+        qel.appendChild(opts); qb.appendChild(qel)
+      }
+
+      function finishQuiz(){
+        // 10 questions, 10 points each
+        const points = Math.round((correctCount/qlist.length)*100)
+        state.scores.s3 = Math.max(state.scores.s3, points)
+        updateScoreUI();
+        alert('Quiz complete — you scored '+points+' points (out of 100)')
+      }
+
+      showQ()
+      updateScoreUI();
+    }
+
+    /* ---------------- Results & leaderboard ---------------- */
+    function showResults(){
+      hide('game'); show('results')
+      $('resName').innerText = state.player
+      $('resTotal').innerText = totalScore()
+      $('resTotal').dataset.score = totalScore()
+    }
+
+    function submitLocalLeaderboard(){
+      const raw = localStorage.getItem('sq_leader')
+      let arr = raw ? JSON.parse(raw) : []
+      arr.push({name: state.player, score: totalScore(), date: new Date().toISOString()})
+      arr = arr.sort((a,b)=>b.score - a.score).slice(0,100)
+      localStorage.setItem('sq_leader', JSON.stringify(arr))
+      alert('Score submitted locally!')
+    }
+
+    function renderLeaderboard(){
+      const raw = localStorage.getItem('sq_leader')
+      let arr = raw ? JSON.parse(raw) : []
+      const tbody = document.querySelector('#leaderTable tbody'); tbody.innerHTML=''
+      arr.forEach((r,i)=>{
+        const tr = document.createElement('tr'); tr.innerHTML = `<td>${i+1}</td><td>${r.name}</td><td>${r.score}</td>`
+        tbody.appendChild(tr)
+      })
+      show('leaderboardSection')
+    }
+
+    function downloadLeaderboardCSV(){
+      const raw = localStorage.getItem('sq_leader')
+      let arr = raw ? JSON.parse(raw) : []
+      let csv = 'Rank,Name,Score,Date\n'
+      arr.forEach((r,i)=> csv += `${i+1},"${r.name}",${r.score},${r.date}\n`)
+      const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href=url; a.download='science-quest-leaderboard.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+    }
+
+    /* ---------------- Initialization (set UI & wiring) ---------------- */
+    updateScoreUI()
+
+    // keyboard friendly: allow Enter to begin
+    $('playerName').addEventListener('keyup', e=>{ if(e.key==='Enter') $('beginBtn').click() })
+
+    // On first load, set sample leaderboard if none exists
+    if(!localStorage.getItem('sq_leader')){
+      const sample = [{name:'Aanya',score:220,date:new Date().toISOString()},{name:'Rahul',score:180,date:new Date().toISOString()}]
+      localStorage.setItem('sq_leader', JSON.stringify(sample))
+    }
+
+    // helper: when file opens, focus name
+    window.addEventListener('load', ()=>{ $('playerName').focus() })
+
+  </script>
+</body>
+</html>
